@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { createClient } from "./supabase/server";
 import type { AppMetadata, AppMetadataInput } from "./types";
 
 const TABLE = "appmeta_apps";
@@ -52,7 +52,17 @@ function inputToRow(input: Partial<AppMetadataInput>) {
   return row;
 }
 
+async function requireUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  return { supabase, user };
+}
+
 export async function listApps(): Promise<AppMetadata[]> {
+  const { supabase } = await requireUser();
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -62,6 +72,7 @@ export async function listApps(): Promise<AppMetadata[]> {
 }
 
 export async function getApp(id: string): Promise<AppMetadata | undefined> {
+  const { supabase } = await requireUser();
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
@@ -72,9 +83,10 @@ export async function getApp(id: string): Promise<AppMetadata | undefined> {
 }
 
 export async function createApp(input: AppMetadataInput): Promise<AppMetadata> {
+  const { supabase, user } = await requireUser();
   const { data, error } = await supabase
     .from(TABLE)
-    .insert(inputToRow(input))
+    .insert({ ...inputToRow(input), owner_id: user.id })
     .select("*")
     .single();
   if (error) throw new Error(`createApp: ${error.message}`);
@@ -85,6 +97,7 @@ export async function updateApp(
   id: string,
   patch: Partial<AppMetadataInput>,
 ): Promise<AppMetadata | undefined> {
+  const { supabase } = await requireUser();
   const { data, error } = await supabase
     .from(TABLE)
     .update(inputToRow(patch))
@@ -96,6 +109,7 @@ export async function updateApp(
 }
 
 export async function deleteApp(id: string): Promise<boolean> {
+  const { supabase } = await requireUser();
   const { error, count } = await supabase
     .from(TABLE)
     .delete({ count: "exact" })
