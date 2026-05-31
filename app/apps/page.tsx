@@ -30,7 +30,19 @@ export default async function AppsPage() {
         <div className="grid">
           {apps.map((app) => (
             <Link key={app.id} href={`/apps/${app.id}`} className="card app-card">
-              <h3>{app.name}</h3>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                {app.iconUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={app.iconUrl}
+                    alt=""
+                    width={40}
+                    height={40}
+                    style={{ borderRadius: 8, objectFit: "cover", background: "var(--surface-2)" }}
+                  />
+                ) : null}
+                <h3 style={{ margin: 0 }}>{app.name}</h3>
+              </div>
               <p>{app.description || "No description"}</p>
               <span className={`badge badge-${app.status}`}>{app.status}</span>
               <span className="badge">{app.platform}</span>

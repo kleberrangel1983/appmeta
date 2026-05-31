@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { uploadIcon } from "@/lib/icons";
 import { createApp } from "@/lib/store";
 import type { AppStatus, Platform } from "@/lib/types";
 
@@ -20,7 +21,13 @@ async function createAction(formData: FormData) {
     .map((t) => t.trim())
     .filter(Boolean);
   const storeUrl = String(formData.get("storeUrl") ?? "").trim() || null;
-  const iconUrl = String(formData.get("iconUrl") ?? "").trim() || null;
+
+  const iconFile = formData.get("iconFile");
+  let iconUrl: string | null = String(formData.get("iconUrl") ?? "").trim() || null;
+  if (iconFile instanceof File && iconFile.size > 0) {
+    iconUrl = await uploadIcon(iconFile);
+  }
+
   const slug =
     String(formData.get("slug") ?? "").trim() ||
     name
@@ -104,9 +111,19 @@ export default function NewAppPage() {
           <input id="slug" name="slug" placeholder="auto-generated from name" />
         </div>
 
+        <div>
+          <label htmlFor="iconFile">Icon (PNG/JPEG/WEBP/SVG, max 2 MB)</label>
+          <input
+            id="iconFile"
+            name="iconFile"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          />
+        </div>
+
         <div className="row">
           <div>
-            <label htmlFor="iconUrl">Icon URL</label>
+            <label htmlFor="iconUrl">Icon URL (used if no file uploaded)</label>
             <input id="iconUrl" name="iconUrl" placeholder="https://..." />
           </div>
           <div>

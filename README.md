@@ -19,6 +19,8 @@ em um só lugar.
   ícone e URL da loja
 - Persistência em Postgres via Supabase, com `updated_at` automático e índices
   em `status`, `platform`, `updated_at` e `owner_id`
+- Upload de ícones para Supabase Storage (bucket público `app-icons`), com policies
+  que restringem upload/delete à pasta do próprio usuário
 
 ## Setup
 
@@ -95,6 +97,7 @@ lib/
 │   ├── server.ts           # createClient() para RSC / Actions / Routes
 │   └── middleware.ts       # updateSession() para middleware.ts
 ├── store.ts                # Repositório de apps (Supabase, escopado ao user)
+├── icons.ts                # uploadIcon() / deleteIcon() para o bucket app-icons
 └── types.ts                # Tipos compartilhados
 ```
 
@@ -122,8 +125,16 @@ Tabela: `public.appmeta_apps`
 RLS habilitado. Policies: `for all to authenticated using (auth.uid() = owner_id)`.
 `anon` não tem nenhum acesso à tabela.
 
+## Storage
+
+Bucket: `app-icons` (público, max 2 MB, MIME: png/jpeg/webp/svg).
+Path: `app-icons/{user_id}/{uuid}.{ext}`.
+RLS no `storage.objects`: leitura pública, mas só o dono pode inserir/atualizar/deletar
+arquivos dentro da sua pasta `{user_id}/`.
+
 ## Próximos passos
 
-- Upload de ícones (Supabase Storage)
 - Integração com App Store Connect e Google Play Console
 - Login social (Google / GitHub) e magic link
+- Filtros e busca na listagem
+- Histórico de versões

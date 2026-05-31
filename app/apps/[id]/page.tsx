@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { deleteIcon, uploadIcon } from "@/lib/icons";
 import { deleteApp, getApp, updateApp } from "@/lib/store";
 import type { AppStatus, Platform } from "@/lib/types";
 
@@ -7,6 +8,16 @@ export const dynamic = "force-dynamic";
 
 async function updateAction(id: string, formData: FormData) {
   "use server";
+
+  const previous = await getApp(id);
+  if (!previous) throw new Error("Not found");
+
+  const iconFile = formData.get("iconFile");
+  let iconUrl: string | null = String(formData.get("iconUrl") ?? "").trim() || null;
+  if (iconFile instanceof File && iconFile.size > 0) {
+    iconUrl = await uploadIcon(iconFile);
+    if (previous.iconUrl) await deleteIcon(previous.iconUrl);
+  }
 
   const patch = {
     name: String(formData.get("name") ?? "").trim(),
@@ -20,7 +31,7 @@ async function updateAction(id: string, formData: FormData) {
       .map((t) => t.trim())
       .filter(Boolean),
     storeUrl: String(formData.get("storeUrl") ?? "").trim() || null,
-    iconUrl: String(formData.get("iconUrl") ?? "").trim() || null,
+    iconUrl,
     slug: String(formData.get("slug") ?? "").trim(),
   };
 
@@ -30,6 +41,8 @@ async function updateAction(id: string, formData: FormData) {
 
 async function deleteAction(id: string) {
   "use server";
+  const previous = await getApp(id);
+  if (previous?.iconUrl) await deleteIcon(previous.iconUrl);
   await deleteApp(id);
   redirect("/apps");
 }
@@ -62,7 +75,19 @@ export default async function AppDetailPage({
           marginBottom: 8,
         }}
       >
-        <h2 style={{ margin: 0 }}>{app.name}</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {app.iconUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={app.iconUrl}
+              alt=""
+              width={56}
+              height={56}
+              style={{ borderRadius: 12, objectFit: "cover", background: "var(--surface-2)" }}
+            />
+          ) : null}
+          <h2 style={{ margin: 0 }}>{app.name}</h2>
+        </div>
         <span className={`badge badge-${app.status}`}>{app.status}</span>
       </div>
       <p className="muted" style={{ marginTop: 0 }}>
@@ -124,6 +149,18 @@ export default async function AppDetailPage({
         <div>
           <label htmlFor="slug">Slug</label>
           <input id="slug" name="slug" defaultValue={app.slug} />
+        </div>
+
+        <div>
+          <label htmlFor="iconFile">
+            Replace icon (PNG/JPEG/WEBP/SVG, max 2 MB)
+          </label>
+          <input
+            id="iconFile"
+            name="iconFile"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          />
         </div>
 
         <div className="row">
