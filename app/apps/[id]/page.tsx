@@ -24,13 +24,13 @@ async function updateAction(id: string, formData: FormData) {
     slug: String(formData.get("slug") ?? "").trim(),
   };
 
-  updateApp(id, patch);
+  await updateApp(id, patch);
   redirect(`/apps/${id}`);
 }
 
 async function deleteAction(id: string) {
   "use server";
-  deleteApp(id);
+  await deleteApp(id);
   redirect("/apps");
 }
 
@@ -40,7 +40,7 @@ export default async function AppDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const app = getApp(id);
+  const app = await getApp(id);
   if (!app) notFound();
 
   const update = updateAction.bind(null, app.id);

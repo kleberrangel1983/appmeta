@@ -3,8 +3,8 @@ import { listApps } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export default function AppsPage() {
-  const apps = listApps();
+export default async function AppsPage() {
+  const apps = await listApps();
 
   return (
     <>

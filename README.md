@@ -5,18 +5,31 @@ em um só lugar.
 
 ## Stack
 
-- **Next.js 14** (App Router) + **TypeScript**
+- **Next.js 15** (App Router) + **TypeScript**
 - **React Server Components** + Server Actions para o CRUD
-- Storage em memória (substituível por DB real — Postgres, Supabase, SQLite, etc.)
+- **Supabase** (Postgres) como banco de dados
 
 ## Features
 
 - Dashboard com estatísticas (total de apps, publicados, drafts, plataformas)
-- CRUD completo de apps via UI e via API REST
+- CRUD completo via UI e via API REST
 - Metadata: nome, slug, descrição, versão, plataforma, status, categoria, tags,
   ícone e URL da loja
+- Persistência em Postgres via Supabase, com `updated_at` automático e índices
+  em `status`, `platform` e `updated_at`
 
-## Começando
+## Setup
+
+1. Crie um `.env.local` baseado em `.env.example`:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
+```
+
+2. Aplique as migrations (estão em `supabase/migrations/` no painel do Supabase MCP — schema: tabela `public.appmeta_apps`).
+
+3. Rode:
 
 ```bash
 npm install
@@ -30,7 +43,7 @@ Abra [http://localhost:3000](http://localhost:3000).
 | Comando | O que faz |
 |---|---|
 | `npm run dev` | Servidor de desenvolvimento |
-| `npm run build` | Build de produção |
+| `npm run build` | Build de produção (requer `NODE_ENV=production`) |
 | `npm run start` | Roda o build de produção |
 | `npm run lint` | Lint com ESLint |
 | `npm run typecheck` | Verifica tipos sem emitir |
@@ -71,13 +84,36 @@ app/
     └── [id]/route.ts       # GET / PATCH / DELETE
 
 lib/
-├── store.ts                # In-memory store (substitua por DB real)
+├── supabase.ts             # Cliente Supabase compartilhado
+├── store.ts                # Repositório de apps (Supabase)
 └── types.ts                # Tipos compartilhados
 ```
 
+## Banco de dados
+
+Tabela: `public.appmeta_apps`
+
+| Coluna | Tipo | Default |
+|---|---|---|
+| `id` | uuid | `gen_random_uuid()` |
+| `name` | text | — |
+| `slug` | text (unique) | — |
+| `description` | text | `''` |
+| `version` | text | `'0.1.0'` |
+| `platform` | text | check: `ios\|android\|web\|desktop` |
+| `status` | text | check: `draft\|published\|archived` |
+| `category` | text | `'Uncategorized'` |
+| `tags` | text[] | `{}` |
+| `icon_url` | text | nullable |
+| `store_url` | text | nullable |
+| `created_at` | timestamptz | `now()` |
+| `updated_at` | timestamptz | `now()` (auto-bump via trigger) |
+
+RLS está habilitado com policies temporárias abertas para `anon` e `authenticated`.
+**Substituir por policies baseadas em `auth.uid()` quando a autenticação for implementada.**
+
 ## Próximos passos
 
-- Trocar o `lib/store.ts` por um banco real (Supabase, Postgres, etc.)
-- Adicionar autenticação
-- Upload de ícones
+- Autenticação (Supabase Auth) + RLS por usuário
+- Upload de ícones (Supabase Storage)
 - Integração com App Store Connect e Google Play Console

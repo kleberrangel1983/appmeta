@@ -40,8 +40,9 @@ function parseInput(body: unknown): AppMetadataInput | { error: string } {
   };
 }
 
-export function GET() {
-  return NextResponse.json({ apps: listApps() });
+export async function GET() {
+  const apps = await listApps();
+  return NextResponse.json({ apps });
 }
 
 export async function POST(request: Request) {
@@ -50,6 +51,6 @@ export async function POST(request: Request) {
   if ("error" in parsed) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
-  const app = createApp(parsed);
+  const app = await createApp(parsed);
   return NextResponse.json({ app }, { status: 201 });
 }

@@ -28,7 +28,7 @@ async function createAction(formData: FormData) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
-  const app = createApp({
+  const app = await createApp({
     name,
     slug,
     description,

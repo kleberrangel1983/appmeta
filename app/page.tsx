@@ -3,8 +3,8 @@ import { listApps } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export default function DashboardPage() {
-  const apps = listApps();
+export default async function DashboardPage() {
+  const apps = await listApps();
   const total = apps.length;
   const published = apps.filter((a) => a.status === "published").length;
   const drafts = apps.filter((a) => a.status === "draft").length;
