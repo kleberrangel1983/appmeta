@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>appmeta — gerenciador de metadados</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --surface: #14181d;
+    --surface-2: #1c2128;
+    --border: #2a323d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #4f8cff;
+    --accent-hover: #6ea3ff;
+    --danger: #f85149;
+    --success: #3fb950;
+    --warning: #d29922;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px; line-height: 1.5;
+  }
+  a { color: var(--accent); text-decoration: none; cursor: pointer; }
+  a:hover { color: var(--accent-hover); }
+  .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px; margin-bottom: 32px;
+  }
+  .header h1 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+  .header h1 a { color: var(--text); }
+  .nav { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 8px 14px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--surface-2);
+    color: var(--text); font-size: 14px; cursor: pointer; text-decoration: none;
+    font-family: inherit;
+  }
+  .btn:hover { background: var(--border); color: var(--text); }
+  .btn-primary {
+    background: var(--accent); border-color: var(--accent); color: white;
+  }
+  .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn-danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+  .btn-danger:hover { background: var(--danger); color: white; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 20px; cursor: pointer; display: block;
+    color: inherit;
+  }
+  .card:hover { border-color: var(--accent); }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .app-card h3 { margin: 0 0 6px; font-size: 16px; }
+  .app-card p { color: var(--text-muted); margin: 0 0 12px; font-size: 14px; min-height: 42px; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 12px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text-muted);
+    margin-right: 6px; margin-bottom: 4px;
+  }
+  .badge-published { border-color: var(--success); color: var(--success); }
+  .badge-draft { border-color: var(--warning); color: var(--warning); }
+  .badge-archived { border-color: var(--text-muted); }
+  .form { display: grid; gap: 16px; max-width: 600px; }
+  .form label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+  .form input, .form textarea, .form select {
+    width: 100%; padding: 10px 12px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--surface-2);
+    color: var(--text); font-size: 14px; font-family: inherit;
+  }
+  .form textarea { min-height: 100px; resize: vertical; }
+  .form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form .actions { display: flex; gap: 12px; justify-content: flex-end; }
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px; margin-bottom: 32px;
+  }
+  .stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px;
+  }
+  .stat .label {
+    font-size: 12px; text-transform: uppercase;
+    color: var(--text-muted); letter-spacing: 0.05em;
+  }
+  .stat .value { font-size: 28px; font-weight: 600; margin-top: 4px; }
+  .muted { color: var(--text-muted); }
+  .empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .icon {
+    width: 40px; height: 40px; border-radius: 8px;
+    object-fit: cover; background: var(--surface-2);
+  }
+  .icon-lg { width: 56px; height: 56px; border-radius: 12px; }
+  .row-icon-title { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; gap: 12px; flex-wrap: wrap;
+  }
+  .search {
+    flex: 1; max-width: 320px; padding: 8px 12px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 14px;
+    font-family: inherit;
+  }
+  .danger-zone { margin-top: 32px; text-align: right; }
+  @media (max-width: 600px) {
+    .form .row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header class="header">
+    <h1><a onclick="navigate('dashboard')">appmeta</a></h1>
+    <nav class="nav">
+      <a class="btn" onclick="navigate('dashboard')">Dashboard</a>
+      <a class="btn" onclick="navigate('list')">Apps</a>
+      <a class="btn btn-primary" onclick="navigate('new')">+ Novo app</a>
+      <a class="btn" onclick="exportData()" title="Baixar todos os apps em JSON">Exportar</a>
+    </nav>
+  </header>
+  <main id="view"></main>
+</div>
+
+<script>
+'use strict';
+
+const STORAGE_KEY = 'appmeta:apps:v1';
+const PLATFORMS = ['ios', 'android', 'web', 'desktop'];
+const STATUSES = ['draft', 'published', 'archived'];
+
+function uuid() {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+function loadApps() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return seed();
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : seed();
+  } catch {
+    return seed();
+  }
+}
+
+function saveApps(apps) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(apps));
+}
+
+function seed() {
+  const now = new Date().toISOString();
+  const samples = [
+    {
+      id: uuid(), name: 'Pomodoro Pro', slug: 'pomodoro-pro',
+      description: 'Focus timer with task tracking and analytics.',
+      version: '2.4.1', platform: 'ios', status: 'published',
+      category: 'Productivity', tags: ['timer', 'focus', 'productivity'],
+      iconUrl: null, storeUrl: 'https://apps.apple.com/app/pomodoro-pro',
+      createdAt: now, updatedAt: now,
+    },
+    {
+      id: uuid(), name: 'Habit Garden', slug: 'habit-garden',
+      description: 'Grow virtual plants by completing daily habits.',
+      version: '1.0.3', platform: 'android', status: 'draft',
+      category: 'Health & Fitness', tags: ['habits', 'gamification'],
+      iconUrl: null, storeUrl: null,
+      createdAt: now, updatedAt: now,
+    },
+  ];
+  saveApps(samples);
+  return samples;
+}
+
+function slugify(s) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function navigate(view, id) {
+  if (view === 'dashboard') renderDashboard();
+  else if (view === 'list') renderList();
+  else if (view === 'new') renderNew();
+  else if (view === 'edit' && id) renderEdit(id);
+  window.scrollTo(0, 0);
+}
+
+function renderDashboard() {
+  const apps = loadApps();
+  const total = apps.length;
+  const published = apps.filter(a => a.status === 'published').length;
+  const drafts = apps.filter(a => a.status === 'draft').length;
+  const platforms = new Set(apps.map(a => a.platform)).size;
+  const recent = [...apps]
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, 6);
+
+  document.getElementById('view').innerHTML = `
+    <section class="stats">
+      <div class="stat"><div class="label">Total de apps</div><div class="value">${total}</div></div>
+      <div class="stat"><div class="label">Publicados</div><div class="value">${published}</div></div>
+      <div class="stat"><div class="label">Drafts</div><div class="value">${drafts}</div></div>
+      <div class="stat"><div class="label">Plataformas</div><div class="value">${platforms}</div></div>
+    </section>
+    <section>
+      <div class="toolbar">
+        <h2 style="margin:0; font-size:18px;">Recentes</h2>
+        <a class="muted" onclick="navigate('list')">Ver todos →</a>
+      </div>
+      ${recent.length === 0 ? `
+        <div class="empty">
+          Nenhum app ainda. <a onclick="navigate('new')">Crie o primeiro</a>.
+        </div>
+      ` : `
+        <div class="grid">
+          ${recent.map(appCardHtml).join('')}
+        </div>
+      `}
+    </section>
+  `;
+}
+
+function appCardHtml(app) {
+  return `
+    <a class="card app-card" onclick="navigate('edit', '${app.id}')">
+      <div class="row-icon-title">
+        ${app.iconUrl ? `<img class="icon" src="${escapeHtml(app.iconUrl)}" alt="">` : ''}
+        <h3>${escapeHtml(app.name)}</h3>
+      </div>
+      <p>${escapeHtml(app.description || 'Sem descrição')}</p>
+      <span class="badge badge-${app.status}">${app.status}</span>
+      <span class="badge">${app.platform}</span>
+      <span class="badge">v${escapeHtml(app.version)}</span>
+    </a>
+  `;
+}
+
+function renderList() {
+  const apps = [...loadApps()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+  document.getElementById('view').innerHTML = `
+    <div class="toolbar">
+      <h2 style="margin:0; font-size:20px;">Todos os apps</h2>
+      <input class="search" id="search" placeholder="Buscar por nome, tag ou categoria...">
+      <a class="btn btn-primary" onclick="navigate('new')">+ Novo app</a>
+    </div>
+    <div id="list-results">
+      ${apps.length === 0 ? `
+        <div class="empty">
+          Nenhum app ainda. <a onclick="navigate('new')">Crie um</a>.
+        </div>
+      ` : `<div class="grid">${apps.map(appCardHtml).join('')}</div>`}
+    </div>
+  `;
+
+  document.getElementById('search').addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    const filtered = q
+      ? apps.filter(a =>
+          a.name.toLowerCase().includes(q) ||
+          a.category.toLowerCase().includes(q) ||
+          a.tags.some(t => t.toLowerCase().includes(q)) ||
+          a.description.toLowerCase().includes(q)
+        )
+      : apps;
+    document.getElementById('list-results').innerHTML = filtered.length === 0
+      ? `<div class="empty">Nada encontrado para "${escapeHtml(q)}".</div>`
+      : `<div class="grid">${filtered.map(appCardHtml).join('')}</div>`;
+  });
+}
+
+function formHtml(app, isNew) {
+  const a = app || {
+    name: '', description: '', platform: 'web', status: 'draft',
+    version: '0.1.0', category: '', tags: [], slug: '',
+    iconUrl: null, storeUrl: null,
+  };
+  return `
+    <h2 style="margin-top:0;">${isNew ? 'Novo app' : escapeHtml(a.name)}</h2>
+    ${!isNew && a.iconUrl ? `
+      <div style="margin-bottom:16px;">
+        <img class="icon icon-lg" src="${escapeHtml(a.iconUrl)}" alt="">
+      </div>
+    ` : ''}
+    ${!isNew ? `
+      <p class="muted" style="margin-top:0;">
+        Criado em ${new Date(a.createdAt).toLocaleString()} ·
+        Atualizado em ${new Date(a.updatedAt).toLocaleString()}
+      </p>
+    ` : ''}
+    <form id="app-form" class="form">
+      <div>
+        <label for="name">Nome *</label>
+        <input id="name" name="name" required value="${escapeHtml(a.name)}" placeholder="ex: Pomodoro Pro">
+      </div>
+      <div>
+        <label for="description">Descrição</label>
+        <textarea id="description" name="description" placeholder="Resumo do app">${escapeHtml(a.description)}</textarea>
+      </div>
+      <div class="row">
+        <div>
+          <label for="platform">Plataforma</label>
+          <select id="platform" name="platform">
+            ${PLATFORMS.map(p => `<option value="${p}"${a.platform === p ? ' selected' : ''}>${p}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label for="status">Status</label>
+          <select id="status" name="status">
+            ${STATUSES.map(s => `<option value="${s}"${a.status === s ? ' selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="version">Versão</label>
+          <input id="version" name="version" value="${escapeHtml(a.version)}">
+        </div>
+        <div>
+          <label for="category">Categoria</label>
+          <input id="category" name="category" value="${escapeHtml(a.category)}" placeholder="Productivity">
+        </div>
+      </div>
+      <div>
+        <label for="tags">Tags (separadas por vírgula)</label>
+        <input id="tags" name="tags" value="${escapeHtml(a.tags.join(', '))}" placeholder="timer, focus">
+      </div>
+      <div>
+        <label for="slug">Slug ${isNew ? '(opcional)' : ''}</label>
+        <input id="slug" name="slug" value="${escapeHtml(a.slug)}" placeholder="auto a partir do nome">
+      </div>
+      <div>
+        <label for="iconFile">Ícone (PNG/JPEG/WEBP/SVG)</label>
+        <input id="iconFile" name="iconFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+      </div>
+      <div class="row">
+        <div>
+          <label for="iconUrl">URL do ícone (usado se nenhum arquivo)</label>
+          <input id="iconUrl" name="iconUrl" value="${escapeHtml(a.iconUrl ?? '')}" placeholder="https://...">
+        </div>
+        <div>
+          <label for="storeUrl">URL na loja</label>
+          <input id="storeUrl" name="storeUrl" value="${escapeHtml(a.storeUrl ?? '')}" placeholder="https://...">
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn" onclick="navigate('list')">Cancelar</a>
+        <button class="btn btn-primary" type="submit">${isNew ? 'Criar app' : 'Salvar alterações'}</button>
+      </div>
+    </form>
+    ${!isNew ? `
+      <div class="danger-zone">
+        <button class="btn btn-danger" onclick="onDelete('${a.id}')">Excluir app</button>
+      </div>
+    ` : ''}
+  `;
+}
+
+function renderNew() {
+  document.getElementById('view').innerHTML = formHtml(null, true);
+  attachFormHandler(null);
+}
+
+function renderEdit(id) {
+  const app = loadApps().find(a => a.id === id);
+  if (!app) { renderList(); return; }
+  document.getElementById('view').innerHTML = `
+    <div style="margin-bottom:16px;"><a class="muted" onclick="navigate('list')">← Voltar para apps</a></div>
+    ${formHtml(app, false)}
+  `;
+  attachFormHandler(app);
+}
+
+function attachFormHandler(existing) {
+  const form = document.getElementById('app-form');
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const name = String(fd.get('name') ?? '').trim();
+    if (!name) { alert('Nome é obrigatório'); return; }
+
+    let iconUrl = String(fd.get('iconUrl') ?? '').trim() || null;
+    const file = fd.get('iconFile');
+    if (file instanceof File && file.size > 0) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Ícone muito grande (máx 2 MB)');
+        return;
+      }
+      iconUrl = await fileToDataUrl(file);
+    }
+
+    const tags = String(fd.get('tags') ?? '')
+      .split(',').map(t => t.trim()).filter(Boolean);
+    const slug = String(fd.get('slug') ?? '').trim() || slugify(name);
+
+    const data = {
+      name,
+      slug,
+      description: String(fd.get('description') ?? ''),
+      version: String(fd.get('version') ?? '0.1.0') || '0.1.0',
+      platform: String(fd.get('platform') ?? 'web'),
+      status: String(fd.get('status') ?? 'draft'),
+      category: String(fd.get('category') ?? '') || 'Uncategorized',
+      tags,
+      iconUrl,
+      storeUrl: String(fd.get('storeUrl') ?? '').trim() || null,
+    };
+
+    const apps = loadApps();
+    if (existing) {
+      const idx = apps.findIndex(a => a.id === existing.id);
+      if (idx >= 0) {
+        apps[idx] = { ...apps[idx], ...data, updatedAt: new Date().toISOString() };
+      }
+    } else {
+      const now = new Date().toISOString();
+      apps.unshift({ ...data, id: uuid(), createdAt: now, updatedAt: now });
+    }
+    saveApps(apps);
+    navigate(existing ? 'edit' : 'list', existing?.id);
+  });
+}
+
+function onDelete(id) {
+  if (!confirm('Excluir este app? Esta ação não pode ser desfeita.')) return;
+  const apps = loadApps().filter(a => a.id !== id);
+  saveApps(apps);
+  navigate('list');
+}
+
+function exportData() {
+  const apps = loadApps();
+  const blob = new Blob([JSON.stringify(apps, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `appmeta-export-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+navigate('dashboard');
+</script>
+</body>
+</html>
